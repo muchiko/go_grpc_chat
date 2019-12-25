@@ -26,9 +26,13 @@ func Run() {
 		log.Fatal(token.Error())
 	}
 
+	p := newPool()
+	go p.run()
+
 	s := grpc.NewServer()
-	pb.RegisterSocketServiceServer(s, &server{
+	pb.RegisterChatServiceServer(s, &server{
 		mqdb: &client,
+		pool: p,
 	})
 	err = s.Serve(lis)
 	if err != nil {
@@ -38,9 +42,10 @@ func Run() {
 
 type server struct {
 	mqdb *mqtt.Client
+	pool *Pool
 }
 
-func (s *server) Transport(stream pb.SocketService_TransportServer) error {
+func (s *server) Transport(stream pb.ChatService_TransportServer) error {
 	for {
 		in, err := stream.Recv()
 		if err == io.EOF {
@@ -50,39 +55,17 @@ func (s *server) Transport(stream pb.SocketService_TransportServer) error {
 			return err
 		}
 
+		fmt.Println(in.Cmd)
+		fmt.Println(in.RoomId)
 		fmt.Println(in.Message)
 
-		// call
-		switch in.Message {
+		switch in.Cmd {
 		case "sub":
-			topic := "room/#"
-			qos := byte(1)
-			token := (*s.mqdb).Subscribe(topic, qos, func(client mqtt.Client, msg mqtt.Message) {
-				fmt.Println("Transport")
-				stream.Send(&pb.Payload{
-					Message: string(msg.Payload()),
-				})
-			})
-			if token.Wait() && token.Error() != nil {
-				return token.Error()
-			}
+			s.pool.register <- room_regist{mqdb: s.mqdb, room_id: in.RoomId, stream: &stream}
 		case "pub":
-			topic := "room"
-			qos := byte(1)
-			retained := false
-			token := (*s.mqdb).Publish(topic, qos, retained, "in-api")
-			if token.Wait() && token.Error() != nil {
-				return token.Error()
-			}
+			s.pool.publish <- room_publish{mqdb: s.mqdb, room_id: in.RoomId, stream: &stream, message: in.Message}
 		default:
 			return nil
-		}
-
-		err = stream.Send(&pb.Payload{
-			Message: "OK",
-		})
-		if err != nil {
-			log.Fatal(err)
 		}
 	}
 }

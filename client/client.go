@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"regexp"
 
 	"github.com/muchiko/go_grpc_chat/pb"
 	"google.golang.org/grpc"
@@ -19,7 +20,7 @@ func Run() {
 	}
 	defer conn.Close()
 
-	client := pb.NewSocketServiceClient(conn)
+	client := pb.NewChatServiceClient(conn)
 	ctx := context.Background()
 	stream, err := client.Transport(ctx)
 	if err != nil {
@@ -34,13 +35,23 @@ func Run() {
 	}
 }
 
-func send(stream pb.SocketService_TransportClient) error {
+func send(stream pb.ChatService_TransportClient) error {
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
 		if scanner.Scan() {
 			text := scanner.Text()
+
+			rep := regexp.MustCompile(`\s*/\s*`)
+			result := rep.Split(text, -1)
+
+			cmd := result[0]
+			room_id := result[1]
+			message := result[2]
+
 			err := stream.Send(&pb.Request{
-				Message: text,
+				Cmd:     cmd,
+				RoomId:  room_id,
+				Message: message,
 			})
 			if err != nil {
 				stream.CloseSend()
@@ -50,7 +61,7 @@ func send(stream pb.SocketService_TransportClient) error {
 	}
 }
 
-func receive(stream pb.SocketService_TransportClient) {
+func receive(stream pb.ChatService_TransportClient) {
 	for {
 		resp, err := stream.Recv()
 		if err == io.EOF {
