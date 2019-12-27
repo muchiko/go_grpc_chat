@@ -44,26 +44,39 @@ func (p *Pool) run() {
 			topic := rp.room_id
 			qos := byte(1)
 			retained := false
-			token := (*rp.mqdb).Publish(topic, qos, retained, rp.message)
-			if token.Wait() && token.Error() != nil {
-				fmt.Println(token.Error())
+			err := p._publish(rp.mqdb, topic, qos, retained, rp.message)
+			if err != nil {
+				fmt.Println(err)
 			}
+
 		}
 	}
+}
+
+func (p *Pool) _publish(mqdb *mqtt.Client, topic string, qos byte, retained bool, message interface{}) error {
+	token := (*mqdb).Publish(topic, qos, retained, message)
+	if token.Wait() && token.Error() != nil {
+		return token.Error()
+	}
+	return nil
 }
 
 func (p *Pool) subscribe(mqdb *mqtt.Client, room *Room) error {
 	topic := room.room_id
 	qos := byte(1)
-	token := (*mqdb).Subscribe(topic, qos, func(client mqtt.Client, msg mqtt.Message) {
+	token := (*mqdb).Subscribe(topic, qos, p._subscribe(room))
+	if token.Wait() && token.Error() != nil {
+		return token.Error()
+	}
+	return nil
+}
+
+func (p *Pool) _subscribe(room *Room) mqtt.MessageHandler {
+	return func(client mqtt.Client, msg mqtt.Message) {
 		for key, _ := range room.streams {
 			(*key).Send(&pb.Payload{
 				Message: string(msg.Payload()),
 			})
 		}
-	})
-	if token.Wait() && token.Error() != nil {
-		return token.Error()
 	}
-	return nil
 }

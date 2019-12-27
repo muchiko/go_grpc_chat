@@ -44,6 +44,10 @@ func send(stream pb.ChatService_TransportClient) error {
 			rep := regexp.MustCompile(`\s*/\s*`)
 			result := rep.Split(text, -1)
 
+			if len(result) < 2 {
+				return fmt.Errorf("cmd:room_id:message")
+			}
+
 			cmd := result[0]
 			room_id := result[1]
 			message := result[2]

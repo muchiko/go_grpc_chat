@@ -1,12 +1,14 @@
 # go_grpc_chat
 
+## use mosquitto (for Mac)
 ```
 brew install mosquitto
 brew services start mosquitto
 /usr/local/opt/mosquitto/sbin/mosquitto -c /usr/local/etc/mosquitto/mosquitto.conf
 ```
 
-
+## use mock
 ```
-mockgen github.com/muchiko/go_grpc_chat/pb ChatServiceClient,ChatService_TransportClient > ./mock_pb/mock_chat.pb.go
+mkdir -m 0755 mock
+make mockgen
 ```

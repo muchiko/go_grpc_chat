@@ -1,4 +1,4 @@
-package mock_pb_test
+package client
 
 import (
 	"context"
@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/muchiko/go_grpc_chat/mock_pb"
-	"github.com/muchiko/go_grpc_chat/pb"
 	"github.com/golang/mock/gomock"
 	"github.com/golang/protobuf/proto"
+	"github.com/muchiko/go_grpc_chat/mock"
+	"github.com/muchiko/go_grpc_chat/pb"
 )
 
 var req = &pb.Request{
@@ -26,14 +26,14 @@ func TestTransport(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	stream := mock_pb.NewMockChatService_TransportClient(ctrl)
+	stream := mock.NewMockChatService_TransportClient(ctrl)
 	stream.EXPECT().Send(
 		gomock.Any(),
 	).Return(nil)
 	stream.EXPECT().Recv().Return(msg, nil)
 	stream.EXPECT().CloseSend().Return(nil)
 
-	client := mock_pb.NewMockChatServiceClient(ctrl)
+	client := mock.NewMockChatServiceClient(ctrl)
 	client.EXPECT().Transport(
 		gomock.Any(),
 	).Return(stream, nil)
