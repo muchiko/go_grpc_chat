@@ -36,7 +36,7 @@ func testSubscribe(client mqtt.Client) error {
 	return nil
 }
 
-func xxTestPublish(t *testing.T) {
+func TestPublish(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
